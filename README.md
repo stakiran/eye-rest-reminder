@@ -1,5 +1,5 @@
 # Eye Rest Reminder
-20分ごとにWindows通知で休憩を促すシステムトレイ常駐ツール。  20-20-20ルール（20分ごとに6m先を20秒見る）の実践用。
+20分ごとに画面全体に赤枠を表示して休憩を促すシステムトレイ常駐ツール。  20-20-20ルール（20分ごとに6m先を20秒見る）の実践用。
 
 ## Requirements
 
@@ -7,16 +7,16 @@
 - Windows 10 / 11
 
 ```
-pip install pystray Pillow plyer
+pip install pystray Pillow
 ```
 
 ## Usage
 
 ```
-python eye_rest_reminder.py
+python eyeres.py
 ```
 
-タスクバー右下にアイコンが常駐する。20分経過でOS通知がポップアップし、約10秒で自動消去。以降ループ。
+タスクバー右下にアイコンが常駐する。20分経過で画面全体に赤枠オーバーレイが表示され、数秒で自動消去。以降ループ。
 
 ### トレイメニュー（右クリック）
 
@@ -29,23 +29,23 @@ python eye_rest_reminder.py
 
 ## Config
 
-`eye_rest_reminder.py` 冒頭の定数を編集：
+`eyeres.py` 冒頭の定数を編集：
 
 ```python
 WORK_MINUTES = 20          # 通知間隔（分）
-REMINDER_TITLE = "👁 目の休憩！"
-REMINDER_MESSAGE = "画面から目を離して、6m先を20秒見よう"
-NOTIFY_TIMEOUT = 10        # 通知の表示秒数
+NOTIFY_TIMEOUT = 5         # 枠線オーバーレイの表示秒数
+BORDER_WIDTH = 30          # 枠線の太さ（px）
+BORDER_COLOR = "#FF4444"   # 枠線の色
 ```
 
 ## Architecture
 
 ```
 メインスレッド ── pystray イベントループ（トレイアイコン + メニュー）
-タイマースレッド ── 1秒刻みカウントダウン → 0到達で plyer.notification 発火
+タイマースレッド ── 1秒刻みカウントダウン → 0到達で枠線オーバーレイ表示
 ```
 
-- 通知は `plyer.notification.notify()` 経由でWindowsトースト通知を使用。フォーカスを奪わない。
+- 通知は `tkinter` による全画面透明ウィンドウに赤枠を描画。`WS_EX_NOACTIVATE` でフォーカスを奪わず、クリックも貫通する。
 - アイコンは `Pillow` で動的生成（動作中: 青、一時停止: オレンジ）。
 - スレッド間の状態共有は `threading.Lock` で保護。
 
@@ -55,7 +55,6 @@ NOTIFY_TIMEOUT = 10        # 通知の表示秒数
 |---------|------|
 | pystray | システムトレイ常駐 + メニュー |
 | Pillow | トレイアイコン画像生成 |
-| plyer | クロスプラットフォームOS通知 |
 
 ## License
 

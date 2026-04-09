@@ -5,7 +5,7 @@
 システムトレイに常駐し、右クリックで一時停止・再開・終了ができます。
 
 必要なパッケージ:
-    pip install pystray Pillow plyer
+    pip install pystray Pillow
 
 使い方:
     python eye_rest_reminder.py
@@ -31,9 +31,7 @@ except ImportError:
 
 # ---------- 設定 ----------
 WORK_MINUTES = 20          # 通知間隔（分）
-REMINDER_TITLE = "👁 目の休憩！"
-REMINDER_MESSAGE = "画面から目を離して、6m先を20秒見よう"
-NOTIFY_TIMEOUT = 5        # 通知の表示秒数
+NOTIFY_TIMEOUT = 5        # 枠線オーバーレイの表示秒数
 BORDER_WIDTH = 30          # 枠線の太さ（px）
 BORDER_COLOR = "#FF4444"   # 枠線の色
 # ---------------------------
