@@ -11,8 +11,10 @@
     python eye_rest_reminder.py
 """
 
+import ctypes
 import threading
 import time
+import tkinter as tk
 import sys
 from io import BytesIO
 
@@ -31,7 +33,9 @@ except ImportError:
 WORK_MINUTES = 20          # 通知間隔（分）
 REMINDER_TITLE = "👁 目の休憩！"
 REMINDER_MESSAGE = "画面から目を離して、6m先を20秒見よう"
-NOTIFY_TIMEOUT = 10        # 通知の表示秒数
+NOTIFY_TIMEOUT = 5        # 通知の表示秒数
+BORDER_WIDTH = 30          # 枠線の太さ（px）
+BORDER_COLOR = "#FF4444"   # 枠線の色
 # ---------------------------
 
 if "--debug" in sys.argv:
@@ -76,26 +80,50 @@ class EyeRestReminder:
 
         return img
 
-    # --- Windows通知 ---
+    # --- 枠線オーバーレイ通知 ---
     def _notify(self):
-        """OS通知を送る（フォーカスを奪わない）"""
-        try:
-            from plyer import notification
-            notification.notify(
-                title=REMINDER_TITLE,
-                message=REMINDER_MESSAGE,
-                timeout=NOTIFY_TIMEOUT,
-                app_name="目の休憩リマインダー",
-            )
-        except Exception as e:
-            # plyer が動かない場合のフォールバック
-            print(f"通知エラー: {e}")
-            print(f"[{REMINDER_TITLE}] {REMINDER_MESSAGE}")
+        """画面全体に枠線を表示して休憩を促す（フォーカスを奪わない）"""
+        GWL_EXSTYLE = -20
+        WS_EX_NOACTIVATE = 0x08000000
+        WS_EX_TOOLWINDOW = 0x00000080
+        WS_EX_TRANSPARENT = 0x00000020
+
+        def _show():
+            root = tk.Tk()
+            root.overrideredirect(True)
+            root.attributes("-topmost", True)
+            root.attributes("-transparentcolor", "black")
+            root.configure(bg="black")
+
+            sw = root.winfo_screenwidth()
+            sh = root.winfo_screenheight()
+            root.geometry(f"{sw}x{sh}+0+0")
+
+            canvas = tk.Canvas(root, width=sw, height=sh, bg="black", highlightthickness=0)
+            canvas.pack()
+            b = BORDER_WIDTH
+            canvas.create_rectangle(0, 0, sw, b, fill=BORDER_COLOR, outline="")
+            canvas.create_rectangle(0, sh - b, sw, sh, fill=BORDER_COLOR, outline="")
+            canvas.create_rectangle(0, 0, b, sh, fill=BORDER_COLOR, outline="")
+            canvas.create_rectangle(sw - b, 0, sw, sh, fill=BORDER_COLOR, outline="")
+
+            root.update_idletasks()
+            hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
+            style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+            style |= WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT
+            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
+
+            root.after(NOTIFY_TIMEOUT * 1000, root.destroy)
+            root.mainloop()
+
+        threading.Thread(target=_show, daemon=True).start()
 
     # --- タイマーループ（別スレッド） ---
     def _timer_loop(self):
         while self.running:
             time.sleep(1)
+
+            should_notify = False
 
             with self.lock:
                 if self.paused or not self.running:
@@ -105,13 +133,14 @@ class EyeRestReminder:
                 if self.seconds_left <= 0:
                     self.session_count += 1
                     self.seconds_left = WORK_SECONDS
+                    should_notify = True
 
             # メニュー表示を毎秒更新
             if self.icon:
                 self.icon.update_menu()
 
             # ロック外で通知（ブロックする可能性があるため）
-            if self.seconds_left == WORK_SECONDS and self.running:
+            if should_notify and self.running:
                 self._notify()
                 self._update_icon()
 
