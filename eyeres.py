@@ -34,7 +34,10 @@ REMINDER_MESSAGE = "画面から目を離して、6m先を20秒見よう"
 NOTIFY_TIMEOUT = 10        # 通知の表示秒数
 # ---------------------------
 
-WORK_SECONDS = WORK_MINUTES * 60
+if "--debug" in sys.argv:
+    WORK_SECONDS = 7
+else:
+    WORK_SECONDS = WORK_MINUTES * 60
 
 
 class EyeRestReminder:
@@ -170,7 +173,7 @@ class EyeRestReminder:
         timer_thread.start()
 
         print("目の休憩リマインダーを起動しました")
-        print(f"  {WORK_MINUTES}分ごとに通知します")
+        print(f"  {WORK_SECONDS}秒ごとに通知します" if WORK_SECONDS < 60 else f"  {WORK_MINUTES}分ごとに通知します")
         print("  システムトレイのアイコンを右クリックで操作できます")
         print("  終了するにはトレイアイコン → 終了")
 
