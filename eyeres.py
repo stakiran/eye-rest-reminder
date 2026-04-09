@@ -103,6 +103,10 @@ class EyeRestReminder:
                     self.session_count += 1
                     self.seconds_left = WORK_SECONDS
 
+            # メニュー表示を毎秒更新
+            if self.icon:
+                self.icon.update_menu()
+
             # ロック外で通知（ブロックする可能性があるため）
             if self.seconds_left == WORK_SECONDS and self.running:
                 self._notify()
